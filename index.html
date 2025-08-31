@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>期初座位設定系統</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.2em; opacity: 0.9; }
+        .admin-panel { padding: 30px; border-bottom: 2px solid #eee; background: #f8f9fa; }
+        .admin-controls { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-weight: bold; color: #2c3e50; }
+        .form-group select, .form-group input { padding: 12px 15px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; min-width: 150px; }
+        .form-group select:focus, .form-group input:focus { outline: none; border-color: #4facfe; box-shadow: 0 0 10px rgba(79, 172, 254, 0.3); }
+        .btn { padding: 12px 24px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-success { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: white; }
+        .btn-info { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+        .mode-switch { display: flex; gap: 10px; margin: 20px 0; justify-content: center; }
+        .mode-btn { padding: 10px 20px; border: 2px solid #4facfe; background: white; color: #4facfe; border-radius: 25px; cursor: pointer; transition: all 0.3s ease; }
+        .mode-btn.active { background: #4facfe; color: white; }
+        .classroom-container { padding: 30px; }
+        .blackboard { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; text-align: center; padding: 20px; border-radius: 15px; margin-bottom: 40px; font-size: 28px; font-weight: bold; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .seating-area { display: flex; flex-direction: column; gap: 40px; }
+        .row { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; }
+        .group { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 20px; padding: 25px; min-width: 200px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); border: 3px solid transparent; transition: all 0.3s ease; }
+        .group:hover { transform: translateY(-5px); border-color: #4facfe; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+        .group-title { text-align: center; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 12px 20px; border-radius: 15px; font-weight: bold; margin-bottom: 20px; font-size: 18px; }
+        .seat { width: 100%; height: 60px; margin: 10px 0; border: 3px solid #ddd; border-radius: 12px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; font-weight: bold; position: relative; overflow: hidden; }
+        .seat:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); border-color: #4facfe; }
+        .seat.available { border-color: #27ae60; background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: white; }
+        .seat.occupied { border-color: #e74c3c; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; cursor: not-allowed; }
+        .seat.selected { border-color: #f39c12; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(243, 156, 18, 0); } 100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); } }
+        .seat-info { font-size: 14px; text-align: center; }
+        .student-form { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .form-modal { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 500px; width: 90%; }
+        .form-modal h3 { text-align: center; margin-bottom: 30px; color: #2c3e50; font-size: 24px; }
+        .form-modal .form-group { margin-bottom: 20px; }
+        .form-modal input { width: 100%; }
+        .form-actions { display: flex; gap: 15px; justify-content: center; margin-top: 30px; }
+        .summary-panel { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; margin: 30px; border-radius: 20px; text-align: center; }
+        .summary-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-top: 20px; }
+        .stat-item { background: rgba(255,255,255,0.2); padding: 20px; border-radius: 15px; backdrop-filter: blur(10px); }
+        .stat-number { font-size: 32px; font-weight: bold; display: block; }
+        .qr-section { text-align: center; padding: 30px; background: #f8f9fa; margin: 30px; border-radius: 20px; }
+        .qr-code { width: 200px; height: 200px; margin: 20px auto; background: white; border: 5px solid #4facfe; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #666; }
+        .legend { display: flex; justify-content: center; gap: 30px; margin: 30px 0; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 10px; background: white; padding: 10px 20px; border-radius: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .legend-color { width: 20px; height: 20px; border-radius: 50%; }
+        .add-student-btn { width: 100%; height: 35px; border: 2px dashed #3498db; background: transparent; color: #3498db; border-radius: 8px; cursor: pointer; font-size: 14px; margin-top: 5px; }
+        .add-student-btn:hover { background: #3498db; color: white; }
+        @media (max-width: 768px) { .admin-controls { flex-direction: column; align-items: stretch; } .row { flex-direction: column; align-items: center; } .group { min-width: 280px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏫 期初座位設定系統</h1>
+            <p>學期開始座位安排，一次設定整學期使用</p>
+        </div>
+
+        <div class="admin-panel">
+            <div class="admin-controls">
+                <div class="form-group">
+                    <label>選擇班級</label>
+                    <select id="classSelect">
+                        <option value="">請選擇班級</option>
+                        <option value="301">301</option>
+                        <option value="302">302</option>
+                        <option value="303">303</option>
+                        <option value="304">304</option>
+                        <option value="305">305</option>
+                        <option value="306">306</option>
+                        <option value="307">307</option>
+                        <option value="308">308</option>
+                        <option value="309">309</option>
+                        <option value="310">310</option>
+                        <option value="311">311</option>
+                        <option value="312">312</option>
+                        <option value="multiple">多元選修</option>
+                        <option value="advanced">深廣課程</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>學期</label>
+                    <select id="semesterSelect">
+                        <option value="2025-1">2025年上學期</option>
+                        <option value="2025-2">2025年下學期</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" onclick="initializeClass()">初始化班級</button>
+                <button class="btn btn-success" onclick="generateQR()">生成學生連結</button>
+                <button class="btn btn-info" onclick="exportToSheets()">匯出至Google Sheets</button>
+            </div>
+
+            <div class="mode-switch">
+                <div class="mode-btn active" onclick="switchMode('teacher')">👨‍🏫 教師模式</div>
+                <div class="mode-btn" onclick="switchMode('student')">👨‍🎓 學生模式</div>
+            </div>
+        </div>
+
+        <div class="classroom-container">
+            <div class="blackboard">
+                🖤 黑板 📋 <span id="classTitle">請先選擇班級</span>
+            </div>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);"></div>
+                    <span>可選擇</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);"></div>
+                    <span>已選擇</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);"></div>
+                    <span>已被選</span>
+                </div>
+            </div>
+
+            <div class="seating-area">
+                <div class="row">
+                    <div class="group"><div class="group-title">第1組</div><div id="group1"></div><button class="add-student-btn" onclick="addStudent(1)">+ 新增學生</button></div>
+                    <div class="group"><div class="group-title">第2組</div><div id="group2"></div><button class="add-student-btn" onclick="addStudent(2)">+ 新增學生</button></div>
+                    <div class="group"><div class="group-title">第3組</div><div id="group3"></div><button class="add-student-btn" onclick="addStudent(3)">+ 新增學生</button></div>
+                </div>
+                <div class="row">
+                    <div class="group"><div class="group-title">第4組</div><div id="group4"></div><button class="add-student-btn" onclick="addStudent(4)">+ 新增學生</button></div>
+                    <div class="group"><div class="group-title">第5組</div><div id="group5"></div><button class="add-student-btn" onclick="addStudent(5)">+ 新增學生</button></div>
+                    <div class="group"><div class="group-title">第6組</div><div id="group6"></div><button class="add-student-btn" onclick="addStudent(6)">+ 新增學生</button></div>
+                    <div class="group"><div class="group-title">第7組</div><div id="group7"></div><button class="add-student-btn" onclick="addStudent(7)">+ 新增學生</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-panel">
+            <h3>📊 座位安排統計</h3>
+            <div class="summary-stats">
+                <div class="stat-item"><span class="stat-number" id="totalSeats">35</span><span>總座位數</span></div>
+                <div class="stat-item"><span class="stat-number" id="occupiedSeats">0</span><span>已安排</span></div>
+                <div class="stat-item"><span class="stat-number" id="availableSeats">35</span><span>可選擇</span></div>
+                <div class="stat-item"><span class="stat-number" id="completionRate">0%</span><span>完成率</span></div>
+            </div>
+        </div>
+
+        <div class="qr-section" id="qrSection" style="display: none;">
+            <h3>📱 學生選座連結</h3>
+            <p>將此連結分享給學生，讓他們自行選擇座位</p>
+            <div class="qr-code" id="qrCode">QR Code 將在此顯示</div>
+            <p><strong>連結:</strong> <span id="studentLink">尚未生成</span></p>
+            <button class="btn btn-info" onclick="copyLink()">📋 複製連結</button>
+        </div>
+    </div>
+
+    <div class="student-form" id="studentForm">
+        <div class="form-modal">
+            <h3>✏️ 座位資料填寫</h3>
+            <div class="form-group"><label>座號</label><input type="text" id="studentId" placeholder="請輸入座號 (例如: 01)"></div>
+            <div class="form-group"><label>姓名</label><input type="text" id="studentName" placeholder="請輸入姓名"></div>
+            <div class="form-actions">
+                <button class="btn btn-success" onclick="confirmSeat()">✅ 確認座位</button>
+                <button class="btn" onclick="cancelSelection()" style="background: #95a5a6; color: white;">❌ 取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'teacher', selectedClass = '', selectedSemester = '', selectedSeat = null;
+        let studentsData = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            renderAllGroups(); updateSummary(); checkUrlParams();
+        });
+
+        function renderAllGroups() {
+            for (let groupNum = 1; groupNum <= 7; groupNum++) renderGroup(groupNum);
+        }
+
+        function renderGroup(groupNum) {
+            const container = document.getElementById(`group${groupNum}`);
+            container.innerHTML = '';
+            studentsData[groupNum].forEach((student, index) => {
+                const seatDiv = document.createElement('div');
+                seatDiv.className = `seat occupied`;
+                seatDiv.innerHTML = `<div class="seat-info"><div>${student.studentId} ${student.name}</div><div style="font-size: 12px; opacity: 0.8;">已安排</div></div>`;
+                container.appendChild(seatDiv);
+            });
+            const currentCount = studentsData[groupNum].length;
+            for (let i = currentCount; i < 5; i++) {
+                const emptySeat = document.createElement('div');
+                emptySeat.className = 'seat available';
+                emptySeat.innerHTML = `<div class="seat-info"><div>座位 ${i+1}</div><div style="font-size: 12px; opacity: 0.8;">${currentMode === 'student' ? '點擊選擇' : '空座位'}</div></div>`;
+                if (currentMode === 'student') emptySeat.onclick = () => selectSeat(groupNum, i+1);
+                container.appendChild(emptySeat);
+            }
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            alert(mode === 'student' ? '🎓 學生模式：點擊空座位進行選擇' : '👨‍🏫 教師模式：查看座位安排狀況');
+            renderAllGroups();
+        }
+
+        function initializeClass() {
+            selectedClass = document.getElementById('classSelect').value;
+            selectedSemester = document.getElementById('semesterSelect').value;
+            if (!selectedClass) { alert('請先選擇班級！'); return; }
+            const classText = document.getElementById('classSelect').options[document.getElementById('classSelect').selectedIndex].text;
+            document.getElementById('classTitle').textContent = classText;
+            renderAllGroups(); updateSummary();
+            alert(`✅ ${classText} 初始化完成！`);
+        }
+
+        function selectSeat(groupNum, seatNum) {
+            if (!selectedClass) { alert('請先選擇並初始化班級！'); return; }
+            if (currentMode !== 'student') { alert('請切換到學生模式才能選擇座位！'); return; }
+            selectedSeat = { group: groupNum, seat: seatNum };
+            document.getElementById('studentForm').style.display = 'flex';
+        }
+
+        function confirmSeat() {
+            const studentId = document.getElementById('studentId').value.trim();
+            const studentName = document.getElementById('studentName').value.trim();
+            if (!studentId || !studentName) { alert('請填寫完整的座號和姓名！'); return; }
+            if (!selectedSeat) { alert('請先選擇座位！'); return; }
+            
+            let existingStudent = null;
+            Object.values(studentsData).forEach(group => {
+                group.forEach(student => { if (student.studentId === studentId) existingStudent = student; });
+            });
+            if (existingStudent) { alert('此座號已存在！請檢查座號。'); return; }
+            
+            studentsData[selectedSeat.group].push({
+                studentId: studentId, name: studentName, group: selectedSeat.group, 
+                seat: selectedSeat.seat, assignedDate: new Date().toISOString()
+            });
+            
+            document.getElementById('studentForm').style.display = 'none';
+            document.getElementById('studentId').value = '';
+            document.getElementById('studentName').value = '';
+            selectedSeat = null;
+            renderAllGroups(); updateSummary();
+            alert(`✅ 座位安排成功！\n${studentId} ${studentName} -> 第${selectedSeat.group}組`);
+        }
+
+        function cancelSelection() {
+            document.getElementById('studentForm').style.display = 'none';
+            document.getElementById('studentId').value = '';
+            document.getElementById('studentName').value = '';
+            selectedSeat = null;
+        }
+
+        function addStudent(groupNum) {
+            if (currentMode !== 'teacher') { alert('請切換到教師模式才能新增學生！'); return; }
+            if (studentsData[groupNum].length >= 5) { alert('每組最多只能有5位學生！'); return; }
+            
+            const studentId = prompt('請輸入學生座號：');
+            if (!studentId || !studentId.trim()) return;
+            const studentName = prompt('請輸入學生姓名：');
+            if (!studentName || !studentName.trim()) return;
+            
+            let existingStudent = null;
+            Object.values(studentsData).forEach(group => {
+                group.forEach(student => { if (student.studentId === studentId.trim()) existingStudent = student; });
+            });
+            if (existingStudent) { alert('此座號已存在！請檢查座號。'); return; }
+            
+            studentsData[groupNum].push({
+                studentId: studentId.trim(), name: studentName.trim(), group: groupNum,
+                seat: studentsData[groupNum].length + 1, assignedDate: new Date().toISOString()
+            });
+            
+            renderGroup(groupNum); updateSummary();
+            alert(`✅ 學生新增成功！\n${studentId.trim()} ${studentName.trim()} -> 第${groupNum}組`);
+        }
+
+        function updateSummary() {
+            const totalSeats = 35;
+            let occupiedSeats = 0;
+            Object.values(studentsData).forEach(group => { occupiedSeats += group.length; });
+            const availableSeats = totalSeats - occupiedSeats;
+            const completionRate = Math.round((occupiedSeats / totalSeats) * 100);
+            
+            document.getElementById('totalSeats').textContent = totalSeats;
+            document.getElementById('occupiedSeats').textContent = occupiedSeats;
+            document.getElementById('availableSeats').textContent = availableSeats;
+            document.getElementById('completionRate').textContent = `${completionRate}%`;
+        }
+
+        function generateQR() {
+            if (!selectedClass) { alert('請先選擇並初始化班級！'); return; }
+            const studentUrl = `${window.location.href}?class=${selectedClass}&mode=student`;
+            document.getElementById('studentLink').textContent = studentUrl;
+            document.getElementById('qrCode').textContent = `掃描此QR Code\n學生選座連結`;
+            document.getElementById('qrSection').style.display = 'block';
+            alert('✅ 學生選座連結已生成！請分享給學生使用。');
+        }
+
+        function copyLink() {
+            const link = document.getElementById('studentLink').textContent;
+            navigator.clipboard.writeText(link).then(() => { alert('📋 連結已複製到剪貼簿！'); });
+        }
+
+        function exportToSheets() {
+            if (!selectedClass || Object.values(studentsData).every(group => group.length === 0)) {
+                alert('沒有資料可匯出！請先完成座位安排。'); return;
+            }
+            const exportData = {
+                className: document.getElementById('classSelect').options[document.getElementById('classSelect').selectedIndex].text,
+                semester: selectedSemester, students: [], seatingChart: studentsData, exportDate: new Date().toISOString()
+            };
+            Object.values(studentsData).forEach(group => {
+                group.forEach(student => {
+                    exportData.students.push({ 座號: student.studentId, 姓名: student.name, 分組: student.group, 座位: student.seat });
+                });
+            });
+            console.log('匯出到 Google Sheets:', exportData);
+            alert(`✅ 資料已準備匯出到 Google Sheets！\n班級: ${exportData.className}\n學生數: ${exportData.students.length}\n\n(實際使用時會自動發送到 n8n 建立試算表)`);
+        }
+
+        function checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const classParam = urlParams.get('class');
+            const modeParam = urlParams.get('mode');
+            if (classParam && modeParam === 'student') {
+                selectedClass = classParam;
+                switchMode('student');
+                document.getElementById('classSelect').value = classParam;
+                initializeClass();
+            }
+        }
+    </script>
+</body>
+</html>
